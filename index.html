@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>우리 반 1인 1역할 배정기</title>
-  <meta name="description" content="초등학교 교실을 위한 귀엽고 산뜻한 1인 1역할 랜덤 배정, A4 인쇄 및 구글 스프레드시트 연동 웹 애플리케이션" />
-  <meta property="og:title" content="우리 반 1인 1역할 배정기" />
-  <meta property="og:description" content="초등학교 교실을 위한 귀엽고 산뜻한 1인 1역할 랜덤 배정, A4 인쇄 및 구글 스프레드시트 연동 웹 애플리케이션" />
+  <title>우리 반 1인 1역할 배정기 - NAVER 스타일</title>
+  <meta name="description" content="네이버 포털 스타일의 깔끔하고 직관적인 초등학교 학급 1인 1역할 배정 및 관리 웹 애플리케이션" />
+  <meta property="og:title" content="우리 반 1인 1역할 배정기 - NAVER 스타일" />
+  <meta property="og:description" content="네이버 포털 스타일의 깔끔하고 직관적인 초등학교 학급 1인 1역할 배정 및 관리 웹 애플리케이션" />
   <meta property="og:type" content="website" />
   <link rel="stylesheet" href="./style.css" />
 </head>
@@ -15,10 +15,84 @@
   <!-- 축하 콘페티 파티클 캔버스 -->
   <canvas id="confetti-canvas"></canvas>
 
-  <div class="container">
-    
-    <!-- 교실 게시판 인쇄용 전용 헤더 (화면에서는 숨김, @media print 시 출력) -->
-    <header class="print-only-board">
+  <!-- =======================================================================
+       네이버 포털 상단 헤더 & GNB
+       ======================================================================= -->
+  <header class="nv-header-wrapper">
+    <!-- 1. 최상단 유틸리티 링크 바 -->
+    <div class="nv-top-utility">
+      <div class="nv-top-utility-left">
+        <span class="nv-top-utility-link active-green">NAVER 학급 서비스</span>
+        <span style="color:#dcdcdc;">|</span>
+        <span class="nv-top-utility-link" id="nav-class-link">🏫 <span id="top-class-name">3학년 2반</span></span>
+        <span style="color:#dcdcdc;">|</span>
+        <a href="#cards-anchor" class="nv-top-utility-link">배정 현황판</a>
+      </div>
+      <div class="nv-top-utility-right">
+        <div class="nv-weather-widget" id="header-today-date">
+          📅 2026. 10. 17. (금)
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 네이버 시그니처 로고 & 초록색 테두리 검색창 -->
+    <div class="nv-search-container">
+      <div class="nv-logo-area" id="logo-refresh" title="홈으로">
+        <div class="nv-logo-n">N</div>
+        <div class="nv-logo-title">
+          <div class="nv-logo-text">
+            학급 1인 1역할
+            <span class="nv-logo-badge">초등교실</span>
+          </div>
+          <span class="nv-logo-desc">공정하고 신나는 우리 반 역할 매칭</span>
+        </div>
+      </div>
+
+      <!-- 네이버 녹색 검색바 (실시간 학생/역할 검색 필터 기능) -->
+      <div class="nv-search-bar">
+        <input 
+          type="text" 
+          id="nv-search-input" 
+          class="nv-search-input" 
+          placeholder="학생 이름이나 역할을 검색해보세요 (예: 김민준, 칠판)" 
+          autocomplete="off"
+        />
+        <button class="nv-search-btn" id="btn-search-trigger" type="button" aria-label="검색">
+          🔍
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. 네이버 서비스 GNB 바로가기 바 -->
+    <nav class="nv-gnb-bar" aria-label="주요 기능 바로가기">
+      <button class="nv-gnb-item active" id="gnb-home" type="button">
+        <span class="nv-gnb-dot"></span> 홈·배정판
+      </button>
+      <button class="nv-gnb-item" id="btn-sheet-load" type="button">
+        🔄 시트 불러오기
+      </button>
+      <button class="nv-gnb-item" id="btn-sheet-save" type="button">
+        💾 시트에 결과 저장
+      </button>
+      <button class="nv-gnb-item" id="btn-manage-modal" type="button">
+        ⚙️ 명단·역할 관리
+      </button>
+      <button class="nv-gnb-item" id="btn-print" type="button">
+        🖨️ A4 게시판 인쇄
+      </button>
+      <button class="nv-gnb-item" id="btn-copy-text" type="button">
+        📋 결과 텍스트 복사
+      </button>
+    </nav>
+  </header>
+
+  <!-- =======================================================================
+       메인 컨텐츠 레이아웃 (좌: 역할 카드 보드 / 우: 네이버 로그인 스타일 배정 센터)
+       ======================================================================= -->
+  <div class="nv-main-container">
+
+    <!-- 교실 게시판 인쇄용 전용 헤더 (@media print 시에만 노출) -->
+    <div class="print-only-board">
       <div class="print-board-header">
         <h1 id="print-board-title">🏫 우리 반 1인 1역할 게시판</h1>
         <div class="print-board-meta">
@@ -27,128 +101,168 @@
           <span>담당 교사: 담임 교사 (인)</span>
         </div>
       </div>
-    </header>
+    </div>
 
-    <!-- 웹 화면용 메인 헤더 -->
-    <header class="app-header">
-      <div class="header-top">
-        <div class="brand-section">
-          <div class="brand-icon-box" aria-hidden="true">🏫</div>
-          <div class="title-wrap">
-            <h1 class="font-jua">
-              우리 반 1인 1역할 배정기
-              <span class="class-info-pill" id="class-name-display" title="클릭하여 학급명을 수정할 수 있습니다">3학년 2반</span>
-            </h1>
-            <p>모두가 함께 만드는 행복하고 책임감 있는 우리 교실 🌱</p>
+    <!-- 좌측 메인 영역: 주제판 & 역할 카드 그리드 -->
+    <main class="nv-content-area" id="cards-anchor">
+
+      <section class="nv-topic-board">
+        <!-- 주제판 헤더 및 카테고리 필터 탭 -->
+        <div class="nv-board-header">
+          <div class="nv-board-title">
+            <span>📌 1인 1역할 배정 현황</span>
+            <span class="nv-board-counter" id="board-counter">총 12개</span>
+          </div>
+
+          <!-- 카테고리 탭 버튼 목록 -->
+          <div class="nv-category-tabs" id="category-tabs">
+            <button class="nv-cat-tab active" data-category="ALL" type="button">전체</button>
+            <button class="nv-cat-tab" data-category="교실환경" type="button">교실환경</button>
+            <button class="nv-cat-tab" data-category="생활안전" type="button">생활안전</button>
+            <button class="nv-cat-tab" data-category="학습도움" type="button">학습도움</button>
+            <button class="nv-cat-tab" data-category="환경보호" type="button">환경보호</button>
+            <button class="nv-cat-tab" data-category="건강위생" type="button">건강위생</button>
           </div>
         </div>
 
-        <!-- 상단 기능 툴바 (구글 시트 연동, 명단 관리, A4 인쇄) -->
-        <div class="header-actions">
-          <button class="btn btn-sheet" id="btn-sheet-load" title="구글 스프레드시트에서 명단/역할 가져오기">
-            <span class="btn-icon">🔄</span> 시트 불러오기
-          </button>
-          <button class="btn btn-sheet-save" id="btn-sheet-save" title="배정된 결과를 구글 스프레드시트에 저장하기">
-            <span class="btn-icon">💾</span> 시트에 결과 저장
-          </button>
-          <button class="btn btn-secondary" id="btn-manage-modal" title="학생 명단과 역할 목록 직접 편집하기">
-            <span class="btn-icon">⚙️</span> 명단·역할 관리
-          </button>
-          <button class="btn btn-print" id="btn-print" title="교실 게시판 부착용 깔끔한 A4 인쇄 미리보기 및 출력">
-            <span class="btn-icon">🖨️</span> A4 게시판 인쇄
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- 대시보드 & 메인 배정 실행 패널 -->
-    <section class="dashboard-panel">
-      <!-- 상태 요약 칩 -->
-      <div class="stats-row">
-        <div class="stat-chip">
-          <div class="stat-icon students">👦</div>
-          <div class="stat-meta">
-            <div class="label">학급 학생</div>
-            <div class="value font-jua" id="total-students-count">12명</div>
+        <!-- 서브 상태 바 -->
+        <div class="nv-sub-bar">
+          <div class="nv-live-indicator">
+            <span class="nv-live-dot"></span>
+            <span id="sub-status-text">배정 준비 완료</span>
           </div>
+          <span id="search-filter-status" style="font-size: 11.5px; color: #8e959d;">
+            ※ 카드의 ⇄ 버튼으로 담당 학생을 맞바꾸거나 직접 수정할 수 있습니다.
+          </span>
         </div>
 
-        <div class="stat-chip">
-          <div class="stat-icon roles">🏷️</div>
-          <div class="stat-meta">
-            <div class="label">학급 1인 1역할</div>
-            <div class="value font-jua" id="total-roles-count">12개</div>
-          </div>
+        <!-- 역할 카드 그리드 (script.js에서 동적 렌더링) -->
+        <div class="nv-cards-grid" id="cards-grid">
+          <!-- 동적 카드 삽입 영역 -->
         </div>
+      </section>
 
-        <div class="stat-chip">
-          <div class="stat-icon status">🎯</div>
-          <div class="stat-meta">
-            <div class="label">현재 상태</div>
-            <div class="value">
-              <span class="badge-tag badge-ready" id="assign-status-badge">배정 대기중</span>
-            </div>
+      <!-- 인쇄용 하단 푸터 (인쇄 시에만 보임) -->
+      <div class="print-only-board">
+        <div class="print-board-footer">
+          <span>🌱 함께 돕고 서로 배려하며 책임감을 키워가는 행복한 우리 반!</span>
+          <div>
+            <span>담임 교사 확인: <span class="signature-line"></span> (인)</span>
           </div>
         </div>
       </div>
 
-      <!-- 배정 실행 배너 -->
-      <div class="action-banner">
-        <div class="action-guidance">
-          <div class="action-guidance-emoji">🎲</div>
-          <div class="action-guidance-text">
-            <h3>버튼 하나로 공정하게 역할을 뽑아보아요!</h3>
-            <p id="assigned-date-display">아직 배정되지 않음</p>
-          </div>
-        </div>
-
-        <div class="button-group-main">
-          <button class="btn-hero-assign font-jua" id="btn-assign">
-            <span class="btn-icon">🎲</span> 1인 1역할 배정하기
-          </button>
-          <button class="btn btn-sub-action" id="btn-reshuffle" title="현재 학생들을 다시 섞어서 배정합니다">
-            <span class="btn-icon">🔀</span> 다시 섞기
-          </button>
-          <button class="btn btn-sub-action" id="btn-copy-text" title="알림장이나 메신저용으로 텍스트를 복사합니다">
-            <span class="btn-icon">📋</span> 결과 텍스트 복사
-          </button>
-          <button class="btn btn-sub-action" id="btn-reset" title="배정 결과를 초기화합니다">
-            <span class="btn-icon">🔄</span> 초기화
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 역할 배정 결과 카드 그리드 -->
-    <main>
-      <div class="section-header-row">
-        <h2 class="section-title font-jua">
-          <span>✨ 1인 1역할 배정 현황</span>
-        </h2>
-        <span class="section-help-tip">※ 배정 후 카드의 ⇄ 버튼을 누르면 담당 학생을 직접 변경할 수 있습니다.</span>
-      </div>
-
-      <div class="cards-grid" id="cards-grid">
-        <!-- script.js에서 12개의 카드 동적 렌더링 -->
-      </div>
     </main>
 
-    <!-- 인쇄 전용 푸터 (게시판 하단 서명 및 급훈 문구) -->
-    <footer class="print-only-board">
-      <div class="print-board-footer">
-        <span class="motto-text">🌱 함께 돕고 서로 배려하며 책임감을 키워가는 행복한 우리 반!</span>
-        <div class="signature-box">
-          <span>확인일자: 2026. &nbsp;&nbsp;&nbsp;&nbsp;. &nbsp;&nbsp;&nbsp;&nbsp;.</span>
-          <span>담임 교사: <span class="signature-line"></span> (인)</span>
-        </div>
-      </div>
-    </footer>
+    <!-- 우측 사이드바: 네이버 로그인/회원 박스 스타일 컨트롤 센터 -->
+    <aside class="nv-sidebar">
 
+      <!-- 1. 네이버 로그인 박스 스타일: '학급 역할 배정 센터' -->
+      <section class="nv-login-box">
+        <div class="nv-login-header">
+          <div class="nv-class-title-wrap">
+            <span class="nv-class-name" id="class-name-display">3학년 2반</span>
+            <button class="nv-btn-edit-class" id="btn-edit-class-name" title="학급명 변경" type="button">✏️</button>
+          </div>
+          <span class="nv-status-pill nv-status-ready" id="assign-status-badge">배정 대기중</span>
+        </div>
+
+        <!-- 네이버 시그니처 녹색 메인 실행 버튼 -->
+        <button class="nv-btn-primary-action" id="btn-assign" type="button">
+          <span>🎲</span> 1인 1역할 배정하기
+        </button>
+
+        <!-- 빠른 서브 액션 버튼 -->
+        <div class="nv-quick-actions-grid">
+          <button class="nv-btn-sub" id="btn-reshuffle" type="button" title="무작위로 다시 섞기">
+            <span>🔀</span> 다시 섞기
+          </button>
+          <button class="nv-btn-sub" id="btn-copy-text-side" type="button" title="결과 복사하기">
+            <span>📋</span> 텍스트 복사
+          </button>
+          <button class="nv-btn-sub" id="btn-reset" type="button" title="초기화">
+            <span>🔄</span> 초기화
+          </button>
+        </div>
+
+        <!-- 세부 배정 통계 리스트 -->
+        <div class="nv-stat-list">
+          <div class="nv-stat-row">
+            <span class="nv-stat-label">학급 학생 총원</span>
+            <span class="nv-stat-value" id="total-students-count">12명</span>
+          </div>
+          <div class="nv-stat-row">
+            <span class="nv-stat-label">등록된 학급 역할</span>
+            <span class="nv-stat-value" id="total-roles-count">12개</span>
+          </div>
+          <div class="nv-stat-row">
+            <span class="nv-stat-label">최근 배정일시</span>
+            <span class="nv-stat-value" id="assigned-date-display" style="font-size: 11.5px; color: #03c75a;">미배정</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 스프레드시트 연동 위젯 박스 (네이버 페이/쇼핑 위젯 스타일) -->
+      <section class="nv-widget-box">
+        <div class="nv-widget-header">
+          <div class="nv-widget-title">
+            <span>📊 구글 스프레드시트</span>
+          </div>
+          <span class="nv-widget-badge" id="sheet-sync-status">Apps Script</span>
+        </div>
+        <p class="nv-widget-desc">
+          구글 시트와 연동하여 학생 명단을 한 번에 불러오거나 배정 결과를 자동 기록하세요.
+        </p>
+        <div class="nv-widget-buttons">
+          <button class="nv-btn-widget highlight" id="btn-widget-sheet-load" type="button">
+            🔄 시트 불러오기
+          </button>
+          <button class="nv-btn-widget" id="btn-widget-sheet-save" type="button">
+            💾 결과 저장
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. 교실 게시판 인쇄 안내 배너 -->
+      <section class="nv-print-banner">
+        <div class="nv-print-banner-text">
+          <h4>🖨️ A4 교실 게시판 인쇄</h4>
+          <p>교실 벽면 부착용 깔끔한 규격 출력</p>
+        </div>
+        <button class="nv-btn-print-banner" id="btn-banner-print" type="button">
+          출력하기
+        </button>
+      </section>
+
+      <!-- 4. 네이버 안내 팁 박스 -->
+      <div style="font-size: 12px; color: #8e959d; line-height: 1.5; padding: 0 4px;">
+        💡 <b>NAVER 스타일 팁</b>: 상단 검색창에 학생 이름(예: '김민준')을 입력하면 해당 학생의 배정 카드로 즉시 이동 및 필터링됩니다.
+      </div>
+
+    </aside>
   </div>
 
-  <!-- -----------------------------------------------------------------------
+  <!-- =======================================================================
+       네이버 포털 푸터 (Footer)
+       ======================================================================= -->
+  <footer class="nv-footer">
+    <div class="nv-footer-inner">
+      <div class="nv-footer-links">
+        <a href="#" class="nv-footer-link" id="footer-link-guide">이용안내</a>
+        <a href="#" class="nv-footer-link" id="footer-link-sheet">스프레드시트 연동가이드</a>
+        <a href="#" class="nv-footer-link" id="footer-link-manage">학생·역할 설정</a>
+        <a href="https://pages.github.com/" target="_blank" rel="noopener noreferrer" class="nv-footer-link">GitHub Pages 호스팅</a>
+      </div>
+      <div class="nv-footer-copy">
+        <span>본 웹 애플리케이션은 네이버(NAVER) 포털 디자인 스타일을 참고하여 제작된 초등학교 학급 1인 1역할 배정 도구입니다.</span>
+        <span>© Class 1-Role Manager. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =======================================================================
        모달 1: 학생 명단 및 역할 관리
-       ----------------------------------------------------------------------- -->
+       ======================================================================= -->
   <div class="modal-overlay" id="manage-modal" role="dialog" aria-modal="true" aria-labelledby="manage-modal-title">
     <div class="modal-window">
       <div class="modal-header">
@@ -190,10 +304,10 @@
         <div id="tab-roles-content" style="display: none;">
           <div class="form-group">
             <label class="form-label" for="textarea-roles">
-              <span>역할 목록 (형식: 역할명 | 역할 설명 | 이모지)</span>
+              <span>역할 목록 (형식: 역할명 | 역할 설명 | 이모지 | 분류)</span>
             </label>
-            <textarea id="textarea-roles" class="form-textarea" placeholder="칠판 도우미 | 수업 후 칠판을 깨끗이 정리해요 | 🧹"></textarea>
-            <p class="form-help">💡 한 줄에 하나씩 [역할명 | 설명 | 이모지] 형식으로 적어주세요.</p>
+            <textarea id="textarea-roles" class="form-textarea" placeholder="칠판 도우미 | 수업 후 칠판을 깨끗이 정리해요 | 🧹 | 교실환경"></textarea>
+            <p class="form-help">💡 한 줄에 하나씩 [역할명 | 설명 | 이모지 | 분류] 형식으로 적어주세요.</p>
           </div>
         </div>
 
@@ -203,19 +317,19 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="btn-reset-default-manage" type="button">
+        <button class="btn-modal-cancel" id="btn-reset-default-manage" type="button">
           기본 예시(12명)로 복원
         </button>
-        <button class="btn btn-primary" id="btn-save-manage" type="button">
+        <button class="btn-modal-submit" id="btn-save-manage" type="button">
           저장하고 반영하기
         </button>
       </div>
     </div>
   </div>
 
-  <!-- -----------------------------------------------------------------------
+  <!-- =======================================================================
        모달 2: 구글 스프레드시트(Apps Script) 양방향 연동
-       ----------------------------------------------------------------------- -->
+       ======================================================================= -->
   <div class="modal-overlay" id="sheet-modal" role="dialog" aria-modal="true" aria-labelledby="sheet-modal-title">
     <div class="modal-window">
       <div class="modal-header">
@@ -225,7 +339,7 @@
 
       <div class="modal-body">
         <div class="info-callout" id="sheet-status-notice">
-          💡 다음 단계에서 Google Apps Script 웹 앱 배포 URL을 입력해두면, 구글 시트와 1초 만에 실시간으로 명단을 가져오거나 배정 결과를 자동 기록할 수 있습니다.
+          💡 Google Apps Script 웹 앱 배포 URL을 입력해두면, 구글 시트와 실시간으로 명단을 가져오거나 배정 결과를 자동 기록할 수 있습니다.
         </div>
 
         <div class="form-group">
@@ -242,20 +356,20 @@
         </div>
 
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-sheet" id="btn-test-sheet-fetch" type="button" style="flex: 1;">
+          <button class="btn-modal-submit" id="btn-test-sheet-fetch" type="button" style="flex: 1; background: var(--naver-green);">
             🔄 시트에서 불러오기 실행
           </button>
-          <button class="btn btn-sheet-save" id="btn-test-sheet-send" type="button" style="flex: 1;">
+          <button class="btn-modal-cancel" id="btn-test-sheet-send" type="button" style="flex: 1; font-weight: 700; color: #009e43;">
             💾 시트에 결과 저장 실행
           </button>
         </div>
 
-        <!-- Apps Script 간편 가이드 & 코드 복사 -->
-        <div class="form-group" style="margin-top: 10px;">
+        <!-- Apps Script 가이드 & 코드 복사 -->
+        <div class="form-group" style="margin-top: 6px;">
           <label class="form-label">
             <span>📖 구글 스프레드시트 Apps Script 연동 3분 가이드</span>
           </label>
-          <ol style="font-size: 13px; color: #475569; padding-left: 20px; line-height: 1.6;">
+          <ol style="font-size: 12px; color: #475569; padding-left: 20px; line-height: 1.6;">
             <li>선생님의 구글 스프레드시트 메뉴에서 <b>[확장 프로그램] → [Apps Script]</b>를 엽니다.</li>
             <li>아래 스크립트 코드를 복사하여 붙여넣고 저장합니다.</li>
             <li>오른쪽 상단 <b>[배포] → [새 배포]</b>에서 유형을 <b>[웹 앱]</b>으로 선택합니다.</li>
@@ -286,7 +400,7 @@ function doPost(e) {
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-primary" id="btn-save-sheet-url" type="button">
+        <button class="btn-modal-submit" id="btn-save-sheet-url" type="button">
           연동 URL 저장하기
         </button>
       </div>
@@ -296,7 +410,7 @@ function doPost(e) {
   <!-- 토스트 안내 메시지 알림 -->
   <div class="toast-notice" id="toast-notice" role="status" aria-live="polite"></div>
 
-  <!-- 동작 로직 스크립트 연결 (GitHub Pages 및 로컬 실행 모두 완벽 호환) -->
+  <!-- 동작 로직 스크립트 연결 -->
   <script type="module" src="./script.js"></script>
 </body>
 </html>

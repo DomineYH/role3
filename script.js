@@ -1,9 +1,9 @@
 /**
- * 우리 반 1인 1역할 배정기 (script.js)
- * - 12명 기본 학생 및 역할 1:1 매칭
- * - 공정한 Fisher-Yates 무작위 셔플 & 롤링 애니메이션
- * - 캔버스 콘페티 축하 효과
- * - 교실 게시판용 A4 인쇄
+ * 우리 반 1인 1역할 배정기 (script.js) - NAVER 포털 스타일
+ * - 네이버 시그니처 디자인 시스템 및 실시간 검색/카테고리 필터링
+ * - 12명 기본 학생 및 역할 1:1 무작위 배정 (Fisher-Yates)
+ * - 캔버스 콘페티 축하 효과 & 롤링 애니메이션
+ * - 교실 게시판용 깔끔한 A4 인쇄
  * - 구글 스프레드시트(Apps Script) 양방향 연동 대비 모달 & API
  * - LocalStorage 자동 저장 및 간편 명단 관리
  */
@@ -22,18 +22,17 @@
     { id: 1, name: "칠판 도우미", emoji: "🧹", desc: "수업 후 칠판과 분필받이를 깨끗이 정리해요", color: "mint", category: "교실환경" },
     { id: 2, name: "우유·급식 도우미", emoji: "🥛", desc: "우유 배분과 급식 줄서기를 친절하게 도와요", color: "sky", category: "생활안전" },
     { id: 3, name: "에너지 지킴이", emoji: "💡", desc: "쉬는 시간 조명 끄기 및 교실 전자기기를 살펴요", color: "yellow", category: "환경보호" },
-    { id: 4, name: "바른 줄서기 반장", emoji: "🚶", desc: "이동 수업 갈 때 두 줄로 바르게 서도록 이끌어요", color: "peach", category: "질서지킴" },
+    { id: 4, name: "바른 줄서기 반장", emoji: "🚶", desc: "이동 수업 갈 때 두 줄로 바르게 서도록 이끌어요", color: "peach", category: "생활안전" },
     { id: 5, name: "창문 환기 대장", emoji: "🪟", desc: "쉬는 시간마다 맑은 공기로 교실 창문을 환기해요", color: "lavender", category: "건강위생" },
     { id: 6, name: "도서 정리 도우미", emoji: "📚", desc: "학급 문고 책을 바르게 꽂고 깔끔히 정돈해요", color: "rose", category: "학습도움" },
     { id: 7, name: "시간표 알리미", emoji: "⏰", desc: "다음 시간 교과목과 필요한 준비물을 미리 적어요", color: "sky", category: "학습도움" },
     { id: 8, name: "분리수거 지킴이", emoji: "♻️", desc: "재활용 쓰레기가 바르게 분리수거되도록 살펴요", color: "green", category: "환경보호" },
     { id: 9, name: "반려식물 사랑이", emoji: "🌱", desc: "학급 화분에 정성껏 물을 주고 보살펴요", color: "mint", category: "교실환경" },
-    { id: 10, name: "체육 교구 관리자", emoji: "⚽", desc: "체육 활동 공과 교구를 안전하게 챙겨와요", color: "peach", category: "체육활동" },
+    { id: 10, name: "체육 교구 관리자", emoji: "⚽", desc: "체육 활동 공과 교구를 안전하게 챙겨와요", color: "peach", category: "생활안전" },
     { id: 11, name: "보건 안심이", emoji: "🩹", desc: "아픈 친구를 따뜻하게 배려하고 보건실을 안내해요", color: "rose", category: "건강위생" },
-    { id: 12, name: "알림장·우편 도우미", emoji: "📬", desc: "가정통신문과 배부 학습지를 친구들에게 전달해요", color: "lavender", category: "학급도움" }
+    { id: 12, name: "알림장·우편 도우미", emoji: "📬", desc: "가정통신문과 배부 학습지를 친구들에게 전달해요", color: "lavender", category: "학습도움" }
   ];
 
-  // 학생별 귀여운 동물/표정 아바타 이모지 매핑 풀
   const AVATAR_EMOJIS = ["👦", "👧", "🐣", "🐻", "🐰", "🦁", "🐶", "🐱", "🐼", "🦊", "🐨", "🐯"];
 
   // 2. 앱 전역 상태
@@ -44,27 +43,29 @@
     roles: JSON.parse(JSON.stringify(DEFAULT_ROLES)),
     assignments: [], // [{ student, role, avatar }]
     appsScriptUrl: "",
-    isShuffling: false
+    isShuffling: false,
+    searchQuery: "",
+    selectedCategory: "ALL"
   };
 
   // 3. 로컬 스토리지 키
   const STORAGE_KEYS = {
-    CLASS_INFO: "role_picker_class_info",
-    STUDENTS: "role_picker_students",
-    ROLES: "role_picker_roles",
-    ASSIGNMENTS: "role_picker_assignments",
-    APPS_SCRIPT_URL: "role_picker_apps_script_url"
+    CLASS_INFO: "naver_role_picker_class_info",
+    STUDENTS: "naver_role_picker_students",
+    ROLES: "naver_role_picker_roles",
+    ASSIGNMENTS: "naver_role_picker_assignments",
+    APPS_SCRIPT_URL: "naver_role_picker_apps_script_url"
   };
 
   // 4. DOM 요소 캐싱
   let elements = {};
 
-  // 초기화 진입점
   document.addEventListener("DOMContentLoaded", initApp);
 
   function initApp() {
     cacheDomElements();
     loadFromLocalStorage();
+    setupTodayDateDisplay();
     setupEventListeners();
     updateDashboardStats();
     renderCards();
@@ -73,22 +74,45 @@
 
   function cacheDomElements() {
     elements = {
-      classNameDisplay: document.getElementById("class-name-display"),
-      assignedDateDisplay: document.getElementById("assigned-date-display"),
-      totalStudentsCount: document.getElementById("total-students-count"),
-      totalRolesCount: document.getElementById("total-roles-count"),
-      assignStatusBadge: document.getElementById("assign-status-badge"),
-      cardsGrid: document.getElementById("cards-grid"),
-      
-      // 주요 버튼
-      btnAssign: document.getElementById("btn-assign"),
-      btnReshuffle: document.getElementById("btn-reshuffle"),
-      btnReset: document.getElementById("btn-reset"),
-      btnCopyText: document.getElementById("btn-copy-text"),
-      btnPrint: document.getElementById("btn-print"),
-      btnManageModal: document.getElementById("btn-manage-modal"),
+      // 상단 헤더 & 검색
+      headerTodayDate: document.getElementById("header-today-date"),
+      topClassName: document.getElementById("top-class-name"),
+      searchInput: document.getElementById("nv-search-input"),
+      btnSearchTrigger: document.getElementById("btn-search-trigger"),
+      logoRefresh: document.getElementById("logo-refresh"),
+      gnbHome: document.getElementById("gnb-home"),
+
+      // 상단 GNB 버튼
       btnSheetLoad: document.getElementById("btn-sheet-load"),
       btnSheetSave: document.getElementById("btn-sheet-save"),
+      btnManageModal: document.getElementById("btn-manage-modal"),
+      btnPrint: document.getElementById("btn-print"),
+      btnCopyText: document.getElementById("btn-copy-text"),
+
+      // 보드 영역
+      boardCounter: document.getElementById("board-counter"),
+      categoryTabsContainer: document.getElementById("category-tabs"),
+      subStatusText: document.getElementById("sub-status-text"),
+      searchFilterStatus: document.getElementById("search-filter-status"),
+      cardsGrid: document.getElementById("cards-grid"),
+
+      // 사이드바 컨트롤 박스
+      classNameDisplay: document.getElementById("class-name-display"),
+      btnEditClassName: document.getElementById("btn-edit-class-name"),
+      assignStatusBadge: document.getElementById("assign-status-badge"),
+      btnAssign: document.getElementById("btn-assign"),
+      btnReshuffle: document.getElementById("btn-reshuffle"),
+      btnCopyTextSide: document.getElementById("btn-copy-text-side"),
+      btnReset: document.getElementById("btn-reset"),
+      totalStudentsCount: document.getElementById("total-students-count"),
+      totalRolesCount: document.getElementById("total-roles-count"),
+      assignedDateDisplay: document.getElementById("assigned-date-display"),
+
+      // 위젯 박스 버튼
+      btnWidgetSheetLoad: document.getElementById("btn-widget-sheet-load"),
+      btnWidgetSheetSave: document.getElementById("btn-widget-sheet-save"),
+      btnBannerPrint: document.getElementById("btn-banner-print"),
+      sheetSyncStatus: document.getElementById("sheet-sync-status"),
 
       // 인쇄 영역
       printTitle: document.getElementById("print-board-title"),
@@ -120,14 +144,31 @@
       btnCopyScriptCode: document.getElementById("btn-copy-script-code"),
       sheetStatusNotice: document.getElementById("sheet-status-notice"),
 
+      // 푸터 링크
+      footerLinkGuide: document.getElementById("footer-link-guide"),
+      footerLinkSheet: document.getElementById("footer-link-sheet"),
+      footerLinkManage: document.getElementById("footer-link-manage"),
+
       // 토스트 및 캔버스
       toast: document.getElementById("toast-notice"),
       confettiCanvas: document.getElementById("confetti-canvas")
     };
   }
 
+  function setupTodayDateDisplay() {
+    if (elements.headerTodayDate) {
+      const days = ["일", "월", "화", "수", "목", "금", "토"];
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const date = String(now.getDate()).padStart(2, '0');
+      const day = days[now.getDay()];
+      elements.headerTodayDate.textContent = `📅 ${year}. ${month}. ${date}. (${day})`;
+    }
+  }
+
   // --------------------------------------------------------------------------
-  // 로컬 스토리지 관리
+  // 로컬 스토리지 동기화
   // --------------------------------------------------------------------------
   function loadFromLocalStorage() {
     try {
@@ -158,7 +199,7 @@
         state.appsScriptUrl = savedUrl;
       }
     } catch (e) {
-      console.warn("로컬 저장소 로딩 중 오류:", e);
+      console.warn("로컬 저장소 로딩 실패:", e);
     }
   }
 
@@ -181,23 +222,50 @@
   // 이벤트 리스너 등록
   // --------------------------------------------------------------------------
   function setupEventListeners() {
-    // 🎲 1인 1역할 배정하기 버튼
-    elements.btnAssign?.addEventListener("click", () => {
-      runRoleAssignment(true);
+    // 1. 네이버 실시간 검색바 필터링
+    elements.searchInput?.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value.trim().toLowerCase();
+      renderCards();
     });
 
-    // 🔀 무작위 다시 섞기
-    elements.btnReshuffle?.addEventListener("click", () => {
-      runRoleAssignment(false);
+    elements.btnSearchTrigger?.addEventListener("click", () => {
+      elements.searchInput?.focus();
     });
 
-    // 🔄 초기화 버튼
+    elements.logoRefresh?.addEventListener("click", () => {
+      state.searchQuery = "";
+      state.selectedCategory = "ALL";
+      if (elements.searchInput) elements.searchInput.value = "";
+      updateCategoryTabsUI();
+      renderCards();
+      showToast("네이버 학급 홈으로 이동했습니다.");
+    });
+
+    elements.gnbHome?.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    // 2. 카테고리 탭 클릭 필터
+    const catTabs = elements.categoryTabsContainer?.querySelectorAll(".nv-cat-tab");
+    catTabs?.forEach(tab => {
+      tab.addEventListener("click", () => {
+        state.selectedCategory = tab.getAttribute("data-category") || "ALL";
+        updateCategoryTabsUI();
+        renderCards();
+      });
+    });
+
+    // 3. 메인 배정 및 재셔플 버튼
+    elements.btnAssign?.addEventListener("click", () => runRoleAssignment(true));
+    elements.btnReshuffle?.addEventListener("click", () => runRoleAssignment(false));
+
+    // 4. 초기화 버튼
     elements.btnReset?.addEventListener("click", () => {
       if (state.assignments.length === 0) {
-        showToast("이미 대기 상태예요 ✨");
+        showToast("이미 대기 상태입니다.");
         return;
       }
-      if (confirm("배정된 결과를 초기화하시겠어요?")) {
+      if (confirm("배정된 결과를 초기화하시겠습니까?")) {
         state.assignments = [];
         state.assignedDate = "";
         saveStateToLocalStorage();
@@ -208,95 +276,105 @@
       }
     });
 
-    // 🖨️ A4 게시판 인쇄 버튼
-    elements.btnPrint?.addEventListener("click", () => {
-      if (state.assignments.length === 0) {
-        if (!confirm("아직 역할 배정이 되지 않았습니다. 빈 양식으로 인쇄하시겠어요?")) {
-          return;
-        }
-      }
-      updatePrintBoardHeader();
-      window.print();
-    });
+    // 5. 인쇄 버튼 (상단 GNB 및 우측 배너)
+    elements.btnPrint?.addEventListener("click", handlePrint);
+    elements.btnBannerPrint?.addEventListener("click", handlePrint);
 
-    // 📋 결과 텍스트 복사 버튼
+    // 6. 텍스트 복사 버튼 (GNB 및 사이드바)
     elements.btnCopyText?.addEventListener("click", copyResultsToClipboard);
+    elements.btnCopyTextSide?.addEventListener("click", copyResultsToClipboard);
 
-    // 학급 정보 pill 클릭 시 간편 변경
-    elements.classNameDisplay?.addEventListener("click", promptClassNameChange);
+    // 7. 학급명 수정 버튼
+    elements.btnEditClassName?.addEventListener("click", promptClassNameChange);
+    elements.topClassName?.parentElement?.addEventListener("click", promptClassNameChange);
 
-    // [⚙️ 명단 및 역할 관리 모달] 열기/닫기
+    // 8. 명단 및 역할 관리 모달
     elements.btnManageModal?.addEventListener("click", openManageModal);
+    elements.footerLinkManage?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openManageModal();
+    });
     elements.btnCloseManageModal?.addEventListener("click", closeManageModal);
     elements.btnSaveManage?.addEventListener("click", saveManageSettings);
     elements.btnResetDefaultManage?.addEventListener("click", resetToDefaultManage);
-
-    // 탭 전환
     elements.tabStudentsBtn?.addEventListener("click", () => switchManageTab("students"));
     elements.tabRolesBtn?.addEventListener("click", () => switchManageTab("roles"));
-
-    // 텍스트 실시간 카운트
     elements.textareaStudents?.addEventListener("input", updateManageCounts);
     elements.textareaRoles?.addEventListener("input", updateManageCounts);
 
-    // [🔄 시트 불러오기] / [💾 시트에 결과 저장] 상단 버튼
-    elements.btnSheetLoad?.addEventListener("click", () => {
+    // 9. 구글 스프레드시트 모달
+    elements.btnSheetLoad?.addEventListener("click", () => openSheetModal("load"));
+    elements.btnSheetSave?.addEventListener("click", () => openSheetModal("save"));
+    elements.btnWidgetSheetLoad?.addEventListener("click", () => openSheetModal("load"));
+    elements.btnWidgetSheetSave?.addEventListener("click", () => openSheetModal("save"));
+    elements.footerLinkSheet?.addEventListener("click", (e) => {
+      e.preventDefault();
       openSheetModal("load");
     });
-    elements.btnSheetSave?.addEventListener("click", () => {
-      openSheetModal("save");
-    });
-
-    // 스프레드시트 모달 닫기
     elements.btnCloseSheetModal?.addEventListener("click", closeSheetModal);
     elements.btnSaveSheetUrl?.addEventListener("click", saveSheetUrlFromModal);
     elements.btnTestSheetFetch?.addEventListener("click", executeSheetLoad);
     elements.btnTestSheetSend?.addEventListener("click", executeSheetSave);
     elements.btnCopyScriptCode?.addEventListener("click", copyAppsScriptCode);
 
-    // 모달 배경 클릭 시 닫기
+    // 10. 이용안내 링크
+    elements.footerLinkGuide?.addEventListener("click", (e) => {
+      e.preventDefault();
+      alert("NAVER 스타일 학급 1인 1역할 배정기 이용 안내:\n1. [🎲 역할 배정하기] 버튼을 누르면 1:1로 랜덤 배정됩니다.\n2. 상단 네이버 검색창에서 학생 이름 또는 역할을 빠르게 찾을 수 있습니다.\n3. [🖨️ A4 인쇄]로 교실 게시판 부착용 출력물을 만드세요.\n4. [🔄 시트 불러오기]를 통해 구글 스프레드시트와 실시간 연동할 수 있습니다.");
+    });
+
+    // 배경 클릭 시 모달 닫기
     window.addEventListener("click", (e) => {
       if (e.target === elements.manageModal) closeManageModal();
       if (e.target === elements.sheetModal) closeSheetModal();
     });
   }
 
+  function updateCategoryTabsUI() {
+    const catTabs = elements.categoryTabsContainer?.querySelectorAll(".nv-cat-tab");
+    catTabs?.forEach(tab => {
+      if (tab.getAttribute("data-category") === state.selectedCategory) {
+        tab.classList.add("active");
+      } else {
+        tab.classList.remove("active");
+      }
+    });
+  }
+
   // --------------------------------------------------------------------------
-  // 핵심 로직: 1인 1역할 무작위 배정 (Fisher-Yates 셔플)
+  // 역할 배정 실행 (Fisher-Yates 알고리즘)
   // --------------------------------------------------------------------------
   function runRoleAssignment(withAnimation = true) {
     if (state.isShuffling) return;
 
     if (state.students.length === 0) {
-      alert("배정할 학생 명단이 비어 있습니다. [명단 설정]에서 학생 이름을 입력해 주세요.");
+      alert("학생 명단이 비어 있습니다. [명단·역할 관리]에서 등록해 주세요.");
       openManageModal();
       return;
     }
 
     if (state.roles.length === 0) {
-      alert("배정할 학급 역할이 비어 있습니다. [명단 설정]에서 역할을 입력해 주세요.");
+      alert("역할 목록이 비어 있습니다. [명단·역할 관리]에서 등록해 주세요.");
       openManageModal();
       return;
     }
 
     state.isShuffling = true;
 
-    // 현재 날짜 세팅 (예: 2026. 10. 17.)
+    // 날짜 기록
     const now = new Date();
     const formattedDate = `${now.getFullYear()}. ${String(now.getMonth() + 1).padStart(2, '0')}. ${String(now.getDate()).padStart(2, '0')}`;
     state.assignedDate = formattedDate;
 
-    // 학생 명단 복사 후 무작위 셔플 (Fisher-Yates)
+    // 학생 명단 셔플
     const shuffledStudents = [...state.students];
     for (let i = shuffledStudents.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffledStudents[i], shuffledStudents[j]] = [shuffledStudents[j], shuffledStudents[i]];
     }
 
-    // 아바타 무작위 셔플
     const shuffledAvatars = [...AVATAR_EMOJIS].sort(() => Math.random() - 0.5);
 
-    // 역할과 1:1 매칭
     const newAssignments = [];
     const count = Math.max(state.roles.length, shuffledStudents.length);
 
@@ -307,7 +385,7 @@
         emoji: "⭐",
         desc: "교실 속 필요한 곳에서 스스로 돕기",
         color: "yellow",
-        category: "자율활동"
+        category: "기타"
       };
 
       const studentName = shuffledStudents[idx] || "선생님 도움";
@@ -322,131 +400,164 @@
     }
 
     if (withAnimation) {
-      // 롤링 애니메이션 효과
-      document.body.classList.add("shuffling");
+      // 롤링 애니메이션
+      if (elements.subStatusText) elements.subStatusText.textContent = "🎲 무작위 롤링 배정 진행 중...";
       elements.cardsGrid.style.opacity = "0.7";
 
       let rollCount = 0;
       const maxRolls = 6;
       const interval = setInterval(() => {
         rollCount++;
-        // 임시 롤링 텍스트
-        const tempStudentNames = [...state.students].sort(() => Math.random() - 0.5);
-        renderTemporaryRolling(tempStudentNames);
+        const tempNames = [...state.students].sort(() => Math.random() - 0.5);
+        renderTemporaryRolling(tempNames);
 
         if (rollCount >= maxRolls) {
           clearInterval(interval);
-          document.body.classList.remove("shuffling");
           elements.cardsGrid.style.opacity = "1";
-
-          // 최종 확정 배정 반영
           state.assignments = newAssignments;
           saveStateToLocalStorage();
           updateDashboardStats();
-          renderCards(true);
+          renderCards();
           updatePrintBoardHeader();
           state.isShuffling = false;
 
-          // 축하 콘페티 파티클
           launchConfetti();
-          showToast(`🎉 ${state.assignments.length}명의 역할 배정이 완료되었어요!`);
+          showToast(`🎉 네이버 스타일 1인 1역할 배정 완료 (${state.assignments.length}명)`);
         }
       }, 100);
     } else {
       state.assignments = newAssignments;
       saveStateToLocalStorage();
       updateDashboardStats();
-      renderCards(false);
+      renderCards();
       updatePrintBoardHeader();
       state.isShuffling = false;
       showToast("새로운 순서로 다시 배정되었습니다 🎲");
     }
   }
 
-  // 롤링 중 임시 화면
   function renderTemporaryRolling(tempNames) {
-    const cards = elements.cardsGrid.querySelectorAll(".role-card");
-    cards.forEach((card, i) => {
-      const nameEl = card.querySelector(".student-name");
+    const cards = elements.cardsGrid?.querySelectorAll(".nv-card");
+    cards?.forEach((card, i) => {
+      const nameEl = card.querySelector(".nv-student-name");
       if (nameEl && tempNames[i % tempNames.length]) {
         nameEl.textContent = tempNames[i % tempNames.length];
-        nameEl.style.color = "#ff7e54";
+        nameEl.style.color = "var(--naver-green)";
       }
     });
   }
 
   // --------------------------------------------------------------------------
-  // 카드 그리드 렌더링
+  // 네이버 스타일 카드 그리드 렌더링 (검색 & 카테고리 필터링 적용)
   // --------------------------------------------------------------------------
-  function renderCards(animatePop = false) {
+  function renderCards() {
     if (!elements.cardsGrid) return;
     elements.cardsGrid.innerHTML = "";
 
     const isAssigned = state.assignments.length > 0;
-    const itemsToRender = isAssigned ? state.assignments : state.roles.map((r, i) => ({
+    const allItems = isAssigned ? state.assignments : state.roles.map((r, i) => ({
       index: i + 1,
       student: null,
       role: r,
       avatar: "👤"
     }));
 
-    itemsToRender.forEach((item, idx) => {
-      const card = document.createElement("div");
-      card.className = `role-card ${animatePop ? 'just-assigned' : ''}`;
-      if (animatePop) {
-        card.style.animationDelay = `${idx * 0.04}s`;
+    // 필터링 적용 (카테고리 & 검색어)
+    const filteredItems = allItems.filter(item => {
+      // 카테고리 필터
+      if (state.selectedCategory !== "ALL") {
+        if (item.role.category !== state.selectedCategory) {
+          return false;
+        }
       }
 
-      const roleColor = item.role.color || "mint";
+      // 검색어 필터
+      if (state.searchQuery) {
+        const studentMatch = item.student ? item.student.toLowerCase().includes(state.searchQuery) : false;
+        const roleMatch = item.role.name.toLowerCase().includes(state.searchQuery);
+        const descMatch = (item.role.desc || "").toLowerCase().includes(state.searchQuery);
+        if (!studentMatch && !roleMatch && !descMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // 헤더 카운터 갱신
+    if (elements.boardCounter) {
+      elements.boardCounter.textContent = `${filteredItems.length}개 / 총 ${allItems.length}개`;
+    }
+
+    if (filteredItems.length === 0) {
+      elements.cardsGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 40px 20px; text-align: center; color: var(--nv-text-muted);">
+          <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--nv-text-title);">일치하는 역할 또는 학생이 없습니다.</div>
+          <div style="font-size: 12px; margin-top: 4px;">검색어를 변경하거나 전체 카테고리를 선택해 보세요.</div>
+        </div>
+      `;
+      return;
+    }
+
+    filteredItems.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "nv-card";
+
       const hasStudent = Boolean(item.student);
+      const roleColor = item.role.color || "mint";
 
       card.innerHTML = `
-        <div class="card-header-line">
-          <span class="card-num-badge">역할 #${item.index || idx + 1}</span>
-          <span class="card-category-tag">${escapeHtml(item.role.category || '1인 1역할')}</span>
+        <div class="nv-card-top">
+          <span class="nv-role-badge nv-badge-${roleColor}">
+            ${escapeHtml(item.role.category || '학급역할')}
+          </span>
+          <span class="nv-card-index">#${item.index}</span>
         </div>
 
-        <div class="role-highlight-box theme-${roleColor}">
-          <div class="role-emoji-large">${item.role.emoji || '🌱'}</div>
-          <div class="role-name-text font-jua">${escapeHtml(item.role.name)}</div>
-          <div class="role-desc-text">${escapeHtml(item.role.desc || '')}</div>
+        <div class="nv-card-body">
+          <div class="nv-card-emoji-box">
+            ${item.role.emoji || '🌱'}
+          </div>
+          <div class="nv-card-info">
+            <h3 class="nv-card-role-name">${escapeHtml(item.role.name)}</h3>
+            <p class="nv-card-role-desc">${escapeHtml(item.role.desc || '')}</p>
+          </div>
         </div>
 
-        <div class="assigned-student-box ${hasStudent ? 'filled' : ''}">
-          <div class="student-identity">
-            <div class="student-avatar">${item.avatar || '👦'}</div>
-            <div class="student-meta">
-              <span class="prefix">담당 학생</span>
-              <span class="student-name font-jua">
-                ${hasStudent ? escapeHtml(item.student) : '<span class="empty-placeholder">배정 대기 중...</span>'}
+        <div class="nv-card-footer">
+          <div class="nv-student-badge-wrap">
+            <div class="nv-student-avatar">${item.avatar || '👦'}</div>
+            <div class="nv-student-details">
+              <span class="nv-student-label">담당 학생</span>
+              <span class="nv-student-name">
+                ${hasStudent ? escapeHtml(item.student) : '<span class="nv-student-empty">배정 대기중</span>'}
               </span>
             </div>
           </div>
           ${hasStudent ? `
-            <button class="btn-card-swap" title="다른 친구와 바꾸기" data-index="${idx}">
+            <button class="nv-btn-swap" title="다른 학생과 바꾸기" data-index="${item.index - 1}">
               ⇄
             </button>
           ` : ''}
         </div>
       `;
 
-      // 개별 친구 스왑 버튼
-      const swapBtn = card.querySelector(".btn-card-swap");
+      const swapBtn = card.querySelector(".nv-btn-swap");
       if (swapBtn) {
-        swapBtn.addEventListener("click", () => handleSingleCardSwap(idx));
+        swapBtn.addEventListener("click", () => handleSingleCardSwap(item.index - 1));
       }
 
       elements.cardsGrid.appendChild(card);
     });
   }
 
-  // 특정 학생 임의 변경/스왑
   function handleSingleCardSwap(targetIndex) {
-    const currentStudent = state.assignments[targetIndex]?.student;
-    const availableStudents = state.students;
+    if (!state.assignments[targetIndex]) return;
 
+    const currentStudent = state.assignments[targetIndex].student;
     const newName = prompt(
-      `[${state.assignments[targetIndex]?.role.name}]의 담당 학생을 직접 변경합니다.\n현재 담당: ${currentStudent}\n새로 배정할 학생 이름을 입력해 주세요:`,
+      `[${state.assignments[targetIndex].role.name}]의 담당 학생을 직접 변경합니다.\n현재 담당: ${currentStudent}\n새로 배정할 학생 이름을 입력해 주세요:`,
       currentStudent
     );
 
@@ -454,38 +565,47 @@
       state.assignments[targetIndex].student = newName.trim();
       saveStateToLocalStorage();
       renderCards();
-      showToast(`${newName.trim()} 학생으로 변경되었어요.`);
+      showToast(`${newName.trim()} 학생으로 수정되었습니다.`);
     }
   }
 
   // --------------------------------------------------------------------------
-  // 상단 대시보드 상태 갱신
+  // 대시보드 상태 갱신
   // --------------------------------------------------------------------------
   function updateDashboardStats() {
     if (elements.classNameDisplay) {
       elements.classNameDisplay.textContent = state.className;
     }
-
+    if (elements.topClassName) {
+      elements.topClassName.textContent = state.className;
+    }
     if (elements.assignedDateDisplay) {
       elements.assignedDateDisplay.textContent = state.assignedDate 
-        ? `배정일: ${state.assignedDate}` 
-        : "아직 배정되지 않음";
+        ? state.assignedDate 
+        : "미배정";
     }
-
     if (elements.totalStudentsCount) {
       elements.totalStudentsCount.textContent = `${state.students.length}명`;
     }
-
     if (elements.totalRolesCount) {
       elements.totalRolesCount.textContent = `${state.roles.length}개`;
     }
 
     if (elements.assignStatusBadge) {
       const isComplete = state.assignments.length > 0;
-      elements.assignStatusBadge.className = `badge-tag ${isComplete ? 'badge-complete' : 'badge-ready'}`;
-      elements.assignStatusBadge.textContent = isComplete 
-        ? `배정 완료 (${state.assignments.length}명)` 
-        : "배정 대기중";
+      elements.assignStatusBadge.className = `nv-status-pill ${isComplete ? 'nv-status-complete' : 'nv-status-ready'}`;
+      elements.assignStatusBadge.textContent = isComplete ? `배정 완료 (${state.assignments.length}명)` : "배정 대기중";
+    }
+
+    if (elements.subStatusText) {
+      elements.subStatusText.textContent = state.assignments.length > 0 
+        ? `전체 ${state.assignments.length}명 1인 1역할 배정 완료` 
+        : "역할 배정 준비 완료";
+    }
+
+    if (elements.sheetSyncStatus) {
+      elements.sheetSyncStatus.textContent = state.appsScriptUrl ? "연동 활성" : "미연동";
+      elements.sheetSyncStatus.style.color = state.appsScriptUrl ? "var(--naver-green)" : "#8e959d";
     }
   }
 
@@ -494,7 +614,7 @@
       elements.printTitle.textContent = `🏫 ${state.className} 1인 1역할 게시판`;
     }
     if (elements.printMetaDate) {
-      elements.printMetaDate.textContent = state.assignedDate ? `배정일자: ${state.assignedDate}` : `작성일: ${new Date().toLocaleDateString('ko-KR')}`;
+      elements.printMetaDate.textContent = state.assignedDate ? `배정일자: ${state.assignedDate}` : `작성일자: ${new Date().toLocaleDateString('ko-KR')}`;
     }
     if (elements.printMetaCount) {
       elements.printMetaCount.textContent = `학생 총원: ${state.students.length}명 | 학급 역할: ${state.roles.length}개`;
@@ -512,35 +632,44 @@
     }
   }
 
+  function handlePrint() {
+    if (state.assignments.length === 0) {
+      if (!confirm("아직 역할 배정이 되지 않았습니다. 빈 양식으로 인쇄하시겠습니까?")) {
+        return;
+      }
+    }
+    updatePrintBoardHeader();
+    window.print();
+  }
+
   // --------------------------------------------------------------------------
-  // 결과 텍스트 클립보드 복사
+  // 결과 텍스트 복사
   // --------------------------------------------------------------------------
   function copyResultsToClipboard() {
     if (state.assignments.length === 0) {
-      showToast("먼저 [🎲 역할 배정하기]를 눌러 배정을 완료해 주세요!");
+      showToast("먼저 [🎲 역할 배정하기]를 진행해 주세요.");
       return;
     }
 
-    let message = `📋 [${state.className} 1인 1역할 배정 결과]\n`;
+    let message = `📋 [${state.className} 1인 1역할 배정 현황]\n`;
     message += `📅 배정일: ${state.assignedDate || '미정'}\n\n`;
 
     state.assignments.forEach((item, i) => {
       message += `${i + 1}. ${item.student}: ${item.role.name} ${item.role.emoji} (${item.role.desc})\n`;
     });
 
-    message += `\n🌱 우리 모두 맡은 역할을 책임감 있게 실천해요! ✨`;
+    message += `\n🌱 우리 모두 맡은 역할을 책임감 있게 실천해요!`;
 
     navigator.clipboard.writeText(message).then(() => {
-      showToast("📋 배정 결과가 클립보드에 복사되었어요! (알림장/메신저에 붙여넣기)");
+      showToast("📋 결과 텍스트가 복사되었습니다! (알림장/메신저에 붙여넣기)");
     }).catch(() => {
-      // 대체 복사
       const tempArea = document.createElement("textarea");
       tempArea.value = message;
       document.body.appendChild(tempArea);
       tempArea.select();
       document.execCommand("copy");
       document.body.removeChild(tempArea);
-      showToast("📋 배정 결과가 복사되었습니다!");
+      showToast("📋 결과 텍스트가 복사되었습니다!");
     });
   }
 
@@ -551,7 +680,7 @@
     if (!elements.manageModal) return;
     elements.inputClassName.value = state.className;
     elements.textareaStudents.value = state.students.join("\n");
-    elements.textareaRoles.value = state.roles.map(r => `${r.name} | ${r.desc} | ${r.emoji}`).join("\n");
+    elements.textareaRoles.value = state.roles.map(r => `${r.name} | ${r.desc} | ${r.emoji} | ${r.category || '교실환경'}`).join("\n");
 
     updateManageCounts();
     switchManageTab("students");
@@ -579,35 +708,29 @@
   function updateManageCounts() {
     const rawStudents = elements.textareaStudents?.value || "";
     const studentLines = rawStudents.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-    if (elements.studentsCountBadge) {
-      elements.studentsCountBadge.textContent = `${studentLines.length}명`;
-    }
+    if (elements.studentsCountBadge) elements.studentsCountBadge.textContent = `${studentLines.length}명`;
 
     const rawRoles = elements.textareaRoles?.value || "";
     const roleLines = rawRoles.split("\n").map(s => s.trim()).filter(Boolean);
-    if (elements.rolesCountBadge) {
-      elements.rolesCountBadge.textContent = `${roleLines.length}개`;
-    }
+    if (elements.rolesCountBadge) elements.rolesCountBadge.textContent = `${roleLines.length}개`;
   }
 
   function saveManageSettings() {
     const newClass = elements.inputClassName.value.trim() || "3학년 2반";
     state.className = newClass;
 
-    // 학생 명단 파싱
     const rawStudents = elements.textareaStudents.value;
     const studentList = rawStudents.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
     if (studentList.length === 0) {
-      alert("적어도 1명 이상의 학생 이름을 입력해 주세요.");
+      alert("최소 1명 이상의 학생 이름을 입력해 주세요.");
       return;
     }
     state.students = studentList;
 
-    // 역할 파싱
     const rawRoles = elements.textareaRoles.value;
     const roleLines = rawRoles.split("\n").map(s => s.trim()).filter(Boolean);
     if (roleLines.length === 0) {
-      alert("적어도 1개 이상의 역할을 입력해 주세요.");
+      alert("최소 1개 이상의 역할을 입력해 주세요.");
       return;
     }
 
@@ -617,13 +740,14 @@
       const name = parts[0] || `역할 ${idx + 1}`;
       const desc = parts[1] || "학급을 위해 성실히 실천해요";
       const emoji = parts[2] || "🌱";
+      const cat = parts[3] || "교실환경";
       return {
         id: idx + 1,
         name: name,
         desc: desc,
         emoji: emoji,
-        color: colorPalettes[idx % colorPalettes.length],
-        category: "학급역할"
+        category: cat,
+        color: colorPalettes[idx % colorPalettes.length]
       };
     });
 
@@ -632,20 +756,20 @@
     renderCards();
     updatePrintBoardHeader();
     closeManageModal();
-    showToast("학생 명단과 역할 목록이 저장되었어요 ✨");
+    showToast("학생 명단과 역할 목록이 저장되었습니다.");
   }
 
   function resetToDefaultManage() {
     if (confirm("기본 12명 학생 및 12개 역할 데이터로 되돌리시겠습니까?")) {
       elements.inputClassName.value = "3학년 2반";
       elements.textareaStudents.value = DEFAULT_STUDENTS.join("\n");
-      elements.textareaRoles.value = DEFAULT_ROLES.map(r => `${r.name} | ${r.desc} | ${r.emoji}`).join("\n");
+      elements.textareaRoles.value = DEFAULT_ROLES.map(r => `${r.name} | ${r.desc} | ${r.emoji} | ${r.category}`).join("\n");
       updateManageCounts();
     }
   }
 
   // --------------------------------------------------------------------------
-  // 모달 2: 구글 스프레드시트(Apps Script) 양방향 연동
+  // 모달 2: 구글 스프레드시트(Apps Script) 연동
   // --------------------------------------------------------------------------
   function openSheetModal(mode = "load") {
     if (!elements.sheetModal) return;
@@ -657,7 +781,7 @@
     if (elements.sheetStatusNotice) {
       elements.sheetStatusNotice.textContent = state.appsScriptUrl
         ? "연동 URL이 등록되어 있습니다. 아래 버튼을 눌러 테스트해보세요."
-        : "💡 다음 단계에서 Apps Script 웹 앱 배포 URL을 여기에 입력하여 간편하게 시트와 실시간 연동할 수 있습니다.";
+        : "💡 Apps Script 웹 앱 배포 URL을 여기에 입력하여 시트와 실시간 연동할 수 있습니다.";
     }
   }
 
@@ -669,15 +793,15 @@
     const url = elements.inputAppsScriptUrl.value.trim();
     state.appsScriptUrl = url;
     saveStateToLocalStorage();
+    updateDashboardStats();
     showToast("스프레드시트 연동 URL이 저장되었습니다.");
   }
 
-  // 시트 불러오기 실행 (Apps Script Web App)
   async function executeSheetLoad() {
     const url = elements.inputAppsScriptUrl.value.trim();
     if (!url) {
-      alert("구글 Apps Script 배포 URL을 입력해 주세요.\n(미입력 시 아래의 기본 예시 데이터로 모의 로드 테스트를 진행할 수 있습니다)");
-      if (confirm("연동 URL 없이 기본 12명 데이터로 리셋 테스트를 진행할까요?")) {
+      alert("구글 Apps Script 배포 URL을 입력해 주세요.\n(미입력 시 기본 12명 명단 데이터로 리셋 테스트를 진행합니다)");
+      if (confirm("연동 URL 없이 기본 12명 데이터로 리셋할까요?")) {
         state.students = [...DEFAULT_STUDENTS];
         state.roles = JSON.parse(JSON.stringify(DEFAULT_ROLES));
         saveStateToLocalStorage();
@@ -715,14 +839,13 @@
       renderCards();
       updatePrintBoardHeader();
       closeSheetModal();
-      showToast("✅ 구글 스프레드시트에서 데이터를 성공적으로 불러왔습니다!");
+      showToast("✅ 구글 시트에서 데이터를 성공적으로 불러왔습니다!");
     } catch (err) {
       console.error(err);
-      alert(`시트 불러오기 중 오류가 발생했습니다:\n${err.message}\n\n* Apps Script 웹 앱 배포 시 '액세스 권한: 모든 사용자(Anyone)'로 설정되었는지 확인해 주세요.`);
+      alert(`시트 불러오기 중 오류가 발생했습니다: ${err.message}\n\n* Apps Script 웹 앱 배포 시 '액세스 권한: 모든 사용자(Anyone)'로 설정되었는지 확인해 주세요.`);
     }
   }
 
-  // 시트에 결과 저장 실행 (Apps Script Web App)
   async function executeSheetSave() {
     if (state.assignments.length === 0) {
       alert("저장할 배정 결과가 없습니다. 먼저 [🎲 역할 배정하기]를 진행해 주세요.");
@@ -731,7 +854,7 @@
 
     const url = elements.inputAppsScriptUrl.value.trim();
     if (!url) {
-      alert("구글 Apps Script 배포 URL을 입력해 주세요.\n(URL을 입력하면 구글 시트에 자동으로 저장 행이 기록됩니다.)");
+      alert("구글 Apps Script 배포 URL을 입력해 주세요.");
       return;
     }
 
@@ -749,9 +872,9 @@
         }))
       };
 
-      const response = await fetch(url, {
+      await fetch(url, {
         method: "POST",
-        mode: "no-cors", // Google Apps Script CORS 우회 표준 모드
+        mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
@@ -759,23 +882,17 @@
       state.appsScriptUrl = url;
       saveStateToLocalStorage();
       closeSheetModal();
-      showToast("✅ 구글 스프레드시트에 배정 결과 저장을 요청했습니다!");
+      showToast("✅ 구글 스프레드시트에 저장을 요청했습니다!");
     } catch (err) {
       console.error(err);
       alert(`시트 저장 중 오류가 발생했습니다: ${err.message}`);
     }
   }
 
-  // 선생님용 추천 Apps Script 템플릿 코드 복사
   function copyAppsScriptCode() {
     const code = `/**
  * [우리 반 1인 1역할 배정기 Google Apps Script 연동 코드]
- * 1. 구글 스프레드시트 메뉴 > 확장 프로그램 > Apps Script 클릭
- * 2. 기존 코드를 지우고 본 코드를 붙여넣기 후 저장 (Ctrl+S)
- * 3. 오른쪽 상단 [배포] > [새 배포] > [웹 앱] 선택
- * 4. '액세스 권한이 있는 사용자'를 '모든 사용자(Anyone)'로 지정 후 배포!
  */
-
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var studentSheet = ss.getSheetByName("학생명단") || ss.getSheets()[0];
@@ -797,6 +914,7 @@ function doGet(e) {
           name: String(rData[j][0]),
           desc: rData[j][1] || "",
           emoji: rData[j][2] || "🌱",
+          category: rData[j][3] || "교실환경",
           color: "mint"
         });
       }
@@ -833,12 +951,12 @@ function doPost(e) {
 }`;
 
     navigator.clipboard.writeText(code).then(() => {
-      showToast("📋 Apps Script 템플릿 코드가 복사되었어요!");
+      showToast("📋 Apps Script 템플릿 코드가 복사되었습니다!");
     });
   }
 
   // --------------------------------------------------------------------------
-  // 아기자기한 축하 콘페티(색종이) 파티클 애니메이션
+  // 축하 콘페티 파티클
   // --------------------------------------------------------------------------
   function launchConfetti() {
     const canvas = elements.confettiCanvas;
@@ -848,14 +966,15 @@ function doPost(e) {
     const width = canvas.width = window.innerWidth;
     const height = canvas.height = window.innerHeight;
 
-    const colors = ["#ff9f7d", "#ffd37e", "#38d9a9", "#4dabf7", "#9775fa", "#f06595"];
+    // 네이버 그린 중심의 파티클 색상
+    const colors = ["#03c75a", "#02b350", "#2db400", "#1ec800", "#ffba00", "#38d9a9"];
     const particles = [];
-    const particleCount = 75;
+    const particleCount = 80;
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: width * 0.5 + (Math.random() - 0.5) * 200,
-        y: height * 0.4 + (Math.random() - 0.5) * 100,
+        y: height * 0.35 + (Math.random() - 0.5) * 100,
         vx: (Math.random() - 0.5) * 16,
         vy: (Math.random() - 0.8) * 15,
         size: Math.random() * 8 + 6,
@@ -870,14 +989,13 @@ function doPost(e) {
     let animationId;
     function renderFrame() {
       ctx.clearRect(0, 0, width, height);
-
       let aliveCount = 0;
       particles.forEach(p => {
         if (p.life > 0) {
           aliveCount++;
           p.x += p.vx;
           p.y += p.vy;
-          p.vy += 0.35; // 중력 가속도
+          p.vy += 0.35;
           p.rotation += p.vRotation;
           p.life -= p.decay;
 
@@ -903,7 +1021,7 @@ function doPost(e) {
   }
 
   // --------------------------------------------------------------------------
-  // 토스트 메시지 안내
+  // 토스트 메시지
   // --------------------------------------------------------------------------
   let toastTimer = null;
   function showToast(message) {
@@ -917,7 +1035,6 @@ function doPost(e) {
     }, 3200);
   }
 
-  // HTML XSS 방지 이스케이프
   function escapeHtml(str) {
     if (!str) return "";
     return String(str)
