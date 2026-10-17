@@ -170,6 +170,23 @@
   // --------------------------------------------------------------------------
   // 로컬 스토리지 동기화
   // --------------------------------------------------------------------------
+  function normalizeStudentName(student) {
+    const candidates = typeof student === "string" ? [student]
+      : student && typeof student === "object" && !Array.isArray(student)
+        ? [student.name, student.studentName, student.student, student["이름"], student["학생이름"], student["학생명"]]
+        : [];
+    for (const value of candidates) {
+      if (typeof value !== "string") continue;
+      const name = value.trim();
+      if (name && name !== "[object Object]") return name;
+    }
+    return "";
+  }
+
+  function normalizeStudents(students) {
+    return Array.isArray(students) ? students.map(normalizeStudentName).filter(Boolean) : [];
+  }
+
   function loadFromLocalStorage() {
     try {
       const savedClass = localStorage.getItem(STORAGE_KEYS.CLASS_INFO);
@@ -181,7 +198,7 @@
 
       const savedStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
       if (savedStudents) {
-        state.students = JSON.parse(savedStudents);
+        state.students = normalizeStudents(JSON.parse(savedStudents));
       }
 
       const savedRoles = localStorage.getItem(STORAGE_KEYS.ROLES);
@@ -191,7 +208,14 @@
 
       const savedAssignments = localStorage.getItem(STORAGE_KEYS.ASSIGNMENTS);
       if (savedAssignments) {
-        state.assignments = JSON.parse(savedAssignments);
+        const assignments = JSON.parse(savedAssignments);
+        state.assignments = Array.isArray(assignments) ? assignments
+          .filter(item => item && typeof item === "object")
+          .map(item => ({ ...item, student: normalizeStudentName(item.student) })) : [];
+        if (state.assignments.some(item => !item.student)) {
+          state.assignments = [];
+          state.assignedDate = "";
+        }
       }
 
       const savedUrl = localStorage.getItem(STORAGE_KEYS.APPS_SCRIPT_URL);
@@ -824,7 +848,13 @@
       const data = await response.json();
 
       if (data.students && Array.isArray(data.students)) {
-        state.students = data.students;
+        const students = normalizeStudents(data.students);
+        if (students.length === 0) {
+          throw new Error("시트에서 유효한 학생 이름을 찾지 못했습니다. 이름 열 또는 name 필드를 확인해 주세요.");
+        }
+        state.students = students;
+        state.assignments = [];
+        state.assignedDate = "";
       }
       if (data.roles && Array.isArray(data.roles)) {
         state.roles = data.roles;
